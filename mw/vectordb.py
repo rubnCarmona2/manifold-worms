@@ -40,8 +40,8 @@ class VectorDB:
             __before = self.data.shape[0]
 
         valid_idxs = torch.where(self.data.norm(dim=-1) > eps)[0]
-        self.positions = self.positions[:, valid_idxs]
-        self.data = self.data[valid_idxs]
+        self.positions = self.positions[:, valid_idxs].detach().requires_grad_(True)
+        self.data = self.data[valid_idxs].detach().requires_grad_(False)
 
         if inspect:
             print(

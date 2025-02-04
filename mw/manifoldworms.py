@@ -47,41 +47,37 @@ class ManifoldWorms(nn.Module):
             }
         )
         self.db = VectorDB(env_dims, channel_size)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=0.01)
         with torch.no_grad():
             self.normalize_positions()
 
-    def forward(
-        self, state: torch.Tensor, step: bool = False
-    ) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[None, None]]:
+    def forward(self, state: torch.Tensor):
         assert state.shape[0] == self.input_size
         assert state.shape[1] == self.channel_size
         self.db.add(self.positions["input_tails"], state)
-        return self.step() if step else (None, None)
 
     def step(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        # Start by ensuring all points lie at the surface of the unit hypersphere
         self.normalize_positions()
-        # Compute the similarities between all points
         similarities = self.db.similarity(
             torch.cat([self.positions["unit_heads"], self.positions["exit_heads"]])
             if self.n_units > 0
             else self.positions["exit_heads"]
         )
-        # Computes an attention-like score based on the distance between points
-        print("Similarities", similarities)
+
         influences = influence.great_distance(similarities, self.reach_threshold)
-        # Get the data from the database
         data = self.db.lookup()
-        # Distribute the data based on the influences
-        print("influences", influences)
-        print("data", data)
         distributed_data = influences @ data
-        # Compute the data that was not influenced by any points
+
         garbage = influences.sum(0).add(-1) * -data.T
-        # Degrade the garbage based on the garbage_decay and update the database
+        exit_outputs = distributed_data[self.n_units :]
+
+        loss = F.mse_loss(exit_outputs, torch.ones_like(exit_outputs)) + garbage.sum()
+        self.optimizer.zero_grad()
+        loss.backward(retain_graph=True)
+        self.optimizer.step()
+        print("Loss", loss.item())
 
         self.db.update_data(garbage * self.garbage_scale)
-        # If there are units, compute the outputs of the units
         if self.n_units > 0:
             units_outputs = torch.stack(
                 [
@@ -91,12 +87,7 @@ class ManifoldWorms(nn.Module):
                 dim=0,
             )
             self.db.add(self.positions["unit_tails"], units_outputs)
-        # Clear the database of zero-influenced points
         self.db.clear_zeros()
-        # Get the outputs of the exit points
-        exit_outputs = distributed_data[self.n_units :]
-        # Return the outputs of the exit points and the garbage for inference and loss
-        return exit_outputs, garbage.sum(1)
 
     def normalize_positions(self):
         for name in self.positions:
