@@ -50,7 +50,7 @@ class ManifoldWorms(nn.Module):
         Pass as a **step post hook** to this module's optimizer (preferred)
         """
         self.normalize_positions()
-        similarity_matrix = self.positions["heads"] @ self.positions["tails"].T
+        self.__similarity_matrix = self.positions["heads"] @ self.positions["tails"].T
 
     def normalize_positions(self):
         """
