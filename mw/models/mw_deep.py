@@ -89,9 +89,11 @@ class ManifoldWorms(nn.Module):
         otherwise closed dynamical system. 
         """
         # construct weight matrix
-        weight = self.__similarity_matrix
-        if sigma > 0:
-            weight = weight + torch.randn_like(weight) * sigma
+        weight = (
+            self.__similarity_matrix + torch.randn_like(weight) * sigma
+            if sigma > 0 else
+            self.__similarity_matrix
+        )
         # prep new state tensor to be processed
         new_state = self.state.clone()
         if x is not None:

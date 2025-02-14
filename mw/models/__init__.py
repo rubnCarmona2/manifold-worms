@@ -1,4 +1,4 @@
-from .default import Regression
+from .regression import Regression
 from .mw_deep import ManifoldWorms
 
 
