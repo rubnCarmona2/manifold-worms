@@ -90,9 +90,12 @@ class ManifoldWorms(nn.Module):
         """
         # construct weight matrix
         weight = (
-            self.__similarity_matrix + torch.randn_like(weight) * sigma
-            if sigma > 0 else
-            self.__similarity_matrix
+            (
+                self.__similarity_matrix
+                + torch.randn_like(self.__similarity_matrix) * sigma
+            )
+            if sigma > 0
+            else self.__similarity_matrix
         )
         # prep new state tensor to be processed
         new_state = self.state.clone()
