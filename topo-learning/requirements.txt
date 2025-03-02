@@ -1,0 +1,4 @@
+scipy==1.13.1
+numpy==1.26.4
+geoopt==0.5.0
+torch==2.4.0
